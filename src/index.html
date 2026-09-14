@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<title>HTHV4 Browser</title>
+<style>
+  :root {
+    --bg: #1f2430;
+    --toolbar: #2a2f3d;
+    --accent: #3b82f6;
+    --text: #e8eaf0;
+    --muted: #9aa1b1;
+    --border: #3a4051;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--bg); color: var(--text);
+    overflow: hidden;
+  }
+  #app { display: flex; flex-direction: column; height: 100vh; }
+
+  #toolbar {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 10px;
+    background: var(--toolbar);
+    border-bottom: 1px solid var(--border);
+    -webkit-app-region: drag;
+  }
+  #toolbar button, #toolbar input, #toolbar .addr-form {
+    -webkit-app-region: no-drag;
+  }
+  #toolbar button {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    width: 32px; height: 32px;
+    font-size: 15px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #toolbar button:hover { background: #363c4d; }
+  #toolbar button:disabled { opacity: .35; cursor: default; }
+  #toolbar button:disabled:hover { background: transparent; }
+
+  .addr-form { flex: 1; display: flex; }
+  #address {
+    flex: 1;
+    background: #12151c;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 6px;
+    padding: 0 10px;
+    height: 32px;
+    font-size: 13px;
+    outline: none;
+  }
+  #address:focus { border-color: var(--accent); }
+
+  #settings-btn { margin-left: 4px; }
+
+  /* Thanh tab, cao 36px (khop voi TAB_BAR_HEIGHT trong main.js). */
+  #tabbar {
+    display: flex; align-items: stretch; gap: 2px;
+    height: 36px; min-height: 36px;
+    padding: 4px 6px 0;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .tab {
+    display: flex; align-items: center; gap: 6px;
+    max-width: 220px; min-width: 100px; flex: 1;
+    padding: 0 8px 0 12px;
+    background: #262c3a;
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .tab:hover { background: #2d3444; }
+  .tab.active { background: var(--toolbar); color: var(--text); }
+  .tab-title {
+    flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .tab-close {
+    width: 18px; height: 18px; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 13px; line-height: 1;
+    color: var(--muted);
+  }
+  .tab-close:hover { background: #3a4051; color: var(--text); }
+  #tab-new {
+    flex: 0 0 auto;
+    width: 28px; height: 28px; margin-top: auto; margin-bottom: 4px;
+    border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; color: var(--text);
+    font-size: 15px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #tab-new:hover { background: #363c4d; }
+  #tab-new:disabled { opacity: .35; cursor: default; }
+  #tab-new:disabled:hover { background: transparent; }
+
+  /* Vung nay chi la cho giu cho (placeholder) - noi dung trang web that su
+     duoc Electron ve de len tren bang mot BrowserView native, dinh vi theo
+     toa do pixel tinh trong main.js (khop voi chieu cao #toolbar). */
+  #webview-wrap { flex: 1; position: relative; background: #fff; }
+
+  #loading-bar {
+    position: absolute; top: 0; left: 0; height: 2px; width: 0%;
+    background: var(--accent); transition: width .2s ease;
+    display: none;
+  }
+
+  /* ---- Settings overlay ---- */
+  #settings-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.5);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 50;
+  }
+  #settings-overlay.open { display: flex; }
+  #settings-card {
+    width: 420px; max-width: 90vw;
+    background: var(--toolbar);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  #settings-card h2 { margin: 0 0 4px; font-size: 16px; }
+  #settings-card p { margin: 0 0 14px; color: var(--muted); font-size: 12px; }
+  #settings-card label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  #settings-url {
+    width: 100%; height: 36px; border-radius: 6px;
+    border: 1px solid var(--border); background: #12151c; color: var(--text);
+    padding: 0 10px; font-size: 13px; margin-bottom: 16px;
+  }
+  #settings-actions { display: flex; justify-content: flex-end; gap: 8px; }
+  #settings-actions button {
+    padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; color: var(--text); cursor: pointer; font-size: 13px;
+  }
+  #settings-save { background: var(--accent); border-color: var(--accent); }
+  #settings-save:hover { filter: brightness(1.08); }
+  #settings-cancel:hover { background: #363c4d; }
+</style>
+</head>
+<body>
+  <div id="app">
+    <div id="toolbar">
+      <button id="btn-back" title="Quay lai">&#8592;</button>
+      <button id="btn-forward" title="Tien">&#8594;</button>
+      <button id="btn-reload" title="Tai lai">&#8635;</button>
+      <button id="btn-home" title="Trang mac dinh">&#8962;</button>
+      <form class="addr-form" id="addr-form">
+        <input id="address" type="text" spellcheck="false" placeholder="Nhap dia chi trang web..." />
+      </form>
+      <button id="devtools-btn" title="DevTools cua trang web (F12) - xem loi Console/Network">&lt;/&gt;</button>
+      <button id="settings-btn" title="Cai dat">&#9881;</button>
+    </div>
+    <div id="tabbar"></div>
+    <div id="webview-wrap">
+      <div id="loading-bar"></div>
+    </div>
+  </div>
+
+  <div id="settings-overlay">
+    <div id="settings-card">
+      <h2>Cai dat trang mac dinh</h2>
+      <p>Trang web nay se duoc mo moi khi khoi dong app, va khi bam nut Home.</p>
+      <label for="settings-url">Dia chi (URL)</label>
+      <input id="settings-url" type="text" spellcheck="false" placeholder="https://hthv4.vnpthis.vn/" />
+      <div id="settings-actions">
+        <button id="settings-cancel">Huy</button>
+        <button id="settings-save">Luu &amp; ap dung</button>
+      </div>
+      <hr style="border-color: var(--border); margin: 16px 0;" />
+      <p style="margin-bottom: 10px;">
+        Neu trang bao loi la/thieu du lieu (vd khong hien thi duoc phieu/PDF)
+        du server da sua, co the do trinh duyet dang giu ban cu trong bo nho
+        dem. Thu xoa cache va tai lai trang (khong mat dang nhap).
+      </p>
+      <div id="settings-actions">
+        <button id="clear-cache-btn">Xoa cache &amp; tai lai trang</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  const address = document.getElementById('address');
+  const addrForm = document.getElementById('addr-form');
+  const btnBack = document.getElementById('btn-back');
+  const btnForward = document.getElementById('btn-forward');
+  const btnReload = document.getElementById('btn-reload');
+  const btnHome = document.getElementById('btn-home');
+  const settingsBtn = document.getElementById('settings-btn');
+  const devtoolsBtn = document.getElementById('devtools-btn');
+  const settingsOverlay = document.getElementById('settings-overlay');
+  const settingsUrlInput = document.getElementById('settings-url');
+  const settingsSave = document.getElementById('settings-save');
+  const settingsCancel = document.getElementById('settings-cancel');
+  const clearCacheBtn = document.getElementById('clear-cache-btn');
+  const loadingBar = document.getElementById('loading-bar');
+  const tabbar = document.getElementById('tabbar');
+
+  let maxTabs = 3;
+
+  // homeUrl chi dung de hien thi mac dinh trong o Settings; noi dung web
+  // that su duoc main process ve bang BrowserView, khong con <webview> o day.
+  let homeUrl = 'https://hthv4.vnpthis.vn/';
+
+  function applyNavState(state) {
+    if (!state) return;
+    address.value = state.url || '';
+    btnBack.disabled = !state.canGoBack;
+    btnForward.disabled = !state.canGoForward;
+    if (state.loading) {
+      loadingBar.style.display = 'block';
+      loadingBar.style.width = '60%';
+    } else {
+      loadingBar.style.width = '100%';
+      setTimeout(() => { loadingBar.style.display = 'none'; loadingBar.style.width = '0%'; }, 200);
+    }
+  }
+
+  window.api.onNavState(applyNavState);
+
+  // Ve lai thanh tab moi khi main process bao trang thai tab thay doi (tao/
+  // dong/chuyen tab, doi tieu de trang...). Khong tu quan ly state o day de
+  // tranh lech voi main process (nguon su that duy nhat la BrowserView).
+  function renderTabs(tabsState) {
+    if (!Array.isArray(tabsState)) return;
+    tabbar.innerHTML = '';
+    tabsState.forEach((t) => {
+      const el = document.createElement('div');
+      el.className = 'tab' + (t.active ? ' active' : '');
+      el.title = t.url || t.title || '';
+
+      const titleEl = document.createElement('span');
+      titleEl.className = 'tab-title';
+      titleEl.textContent = t.title || 'Tab moi';
+      el.appendChild(titleEl);
+
+      if (tabsState.length > 1) {
+        const closeEl = document.createElement('span');
+        closeEl.className = 'tab-close';
+        closeEl.textContent = '×';
+        closeEl.title = 'Dong tab';
+        closeEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          window.api.closeTab(t.id);
+        });
+        el.appendChild(closeEl);
+      }
+
+      el.addEventListener('click', () => {
+        if (!t.active) window.api.switchTab(t.id);
+      });
+      el.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        window.api.tabContextMenu(t.id);
+      });
+      tabbar.appendChild(el);
+    });
+
+    const newBtn = document.createElement('button');
+    newBtn.id = 'tab-new';
+    newBtn.title = tabsState.length >= maxTabs
+      ? `Da dat toi da ${maxTabs} tab`
+      : 'Mo tab moi';
+    newBtn.textContent = '+';
+    newBtn.disabled = tabsState.length >= maxTabs;
+    newBtn.addEventListener('click', () => window.api.newTab());
+    tabbar.appendChild(newBtn);
+  }
+
+  window.api.onTabsState(renderTabs);
+
+  async function init() {
+    homeUrl = await window.api.getUrl();
+    settingsUrlInput.placeholder = homeUrl;
+    maxTabs = await window.api.getMaxTabs();
+    const state = await window.api.getNavState();
+    applyNavState(state);
+  }
+
+  devtoolsBtn.addEventListener('click', () => window.api.openDevTools());
+
+  btnBack.addEventListener('click', () => window.api.back());
+  btnForward.addEventListener('click', () => window.api.forward());
+  btnReload.addEventListener('click', () => window.api.reload());
+  btnHome.addEventListener('click', () => window.api.home());
+
+  addrForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const value = address.value.trim();
+    if (value) window.api.goTo(value);
+  });
+
+  function openSettings() {
+    settingsUrlInput.value = homeUrl;
+    settingsOverlay.classList.add('open');
+    // BrowserView (noi hien thi trang web) la thanh phan native, luon ve de
+    // len tren toan bo HTML cua cua so nen se che khuat overlay nay neu
+    // khong bao main process go no ra tam thoi.
+    window.api.notifyOverlayOpen();
+    settingsUrlInput.focus();
+    settingsUrlInput.select();
+  }
+  function closeSettings() {
+    settingsOverlay.classList.remove('open');
+    window.api.notifyOverlayClose();
+  }
+
+  settingsBtn.addEventListener('click', openSettings);
+  settingsCancel.addEventListener('click', closeSettings);
+  settingsOverlay.addEventListener('click', (e) => {
+    if (e.target === settingsOverlay) closeSettings();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && settingsOverlay.classList.contains('open')) closeSettings();
+  });
+
+  settingsSave.addEventListener('click', async () => {
+    const newUrl = await window.api.setUrl(settingsUrlInput.value.trim());
+    homeUrl = newUrl;
+    closeSettings();
+  });
+  settingsUrlInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') settingsSave.click();
+  });
+
+  clearCacheBtn.addEventListener('click', async () => {
+    clearCacheBtn.disabled = true;
+    clearCacheBtn.textContent = 'Dang xoa...';
+    await window.api.clearCache();
+    clearCacheBtn.disabled = false;
+    clearCacheBtn.textContent = 'Xoa cache & tai lai trang';
+    closeSettings();
+  });
+
+  init();
+</script>
+</body>
+</html>
