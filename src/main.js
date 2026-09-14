@@ -15,13 +15,14 @@ const store = new Store({
   },
 });
 
-const MAX_TABS = 3;
+const MAX_TABS = 10;
 
-// Phai khop voi chieu cao thuc te cua #toolbar + #tabbar trong index.html
-// (toolbar: padding 8px tren/duoi + nut cao 32px + border 1px = 49px;
-// tabbar: 36px).
-const TOOLBAR_HEIGHT = 49;
-const TAB_BAR_HEIGHT = 36;
+// Phai khop CHINH XAC voi #toolbar / #tabbar trong index.html - ca 2 element
+// do deu dat "height" tuong minh (khong phai auto-height) va co
+// box-sizing:border-box toan cuc, nen 2 so nay LA gia tri pixel cuoi cung,
+// khong can cong them padding/border thu cong.
+const TOOLBAR_HEIGHT = 38;
+const TAB_BAR_HEIGHT = 28;
 const TOP_OFFSET = TOOLBAR_HEIGHT + TAB_BAR_HEIGHT;
 
 // ---- Polyfill cho cac API JS moi ma Chromium cu (Electron 22, dung de
@@ -558,6 +559,11 @@ function setupAutoUpdater() {
   }, 4 * 60 * 60 * 1000);
 }
 
+function sendWindowState() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.webContents.send('win:state', { maximized: mainWindow.isMaximized() });
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -565,6 +571,13 @@ function createWindow() {
     minWidth: 640,
     minHeight: 480,
     title: 'HTHV4 Browser',
+    // Bo thanh tieu de mac dinh cua he dieu hanh - toolbar tu ve trong
+    // index.html (voi -webkit-app-region:drag) dong vai tro thanh tieu de,
+    // kem 3 nut Thu nho/Phong to/Dong tu lam (xem #window-controls va cac
+    // IPC "win:*" ben duoi). Giup giao diện gon nhu mot trinh duyet that
+    // (tab + toolbar nam chung 1 khoi, khong bi thua 1 thanh tieu de rieng
+    // phia tren).
+    frame: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -579,8 +592,25 @@ function createWindow() {
 
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
   mainWindow.webContents.on('before-input-event', devToolsShortcut);
+  // Bao trang thai maximize ban dau ngay khi toolbar da san sang, de icon
+  // nut Phong to/Khoi phuc hien dung tu dau (vd neu cua so duoc mo lai o
+  // trang thai da maximize tu lan truoc).
+  mainWindow.webContents.once('did-finish-load', sendWindowState);
 
   mainWindow.on('resize', updateBrowserViewBounds);
+  // Khong chi dua vao 'resize': tren mot so window manager (da phat hien
+  // luc kiem thu tren Linux/fluxbox), goi maximize()/unmaximize() khong
+  // luon luon phat sinh su kien 'resize' kem theo - phai tu goi lai
+  // updateBrowserViewBounds() rieng o day de BrowserView khong bi "ket" o
+  // kich thuoc cu sau khi phong to/khoi phuc cua so.
+  mainWindow.on('maximize', () => {
+    sendWindowState();
+    updateBrowserViewBounds();
+  });
+  mainWindow.on('unmaximize', () => {
+    sendWindowState();
+    updateBrowserViewBounds();
+  });
   mainWindow.on('closed', () => {
     mainWindow = null;
     tabs = [];
@@ -601,6 +631,21 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
+});
+
+// ---- IPC: dieu khien cua so chinh (thu nho / phong to-khoi phuc / dong) ----
+// Thay the cho thanh tieu de mac dinh cua he dieu hanh, vi cua so chay o
+// che do frame:false (xem createWindow).
+ipcMain.on('win:minimize', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.minimize();
+});
+ipcMain.on('win:toggle-maximize', () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (mainWindow.isMaximized()) mainWindow.unmaximize();
+  else mainWindow.maximize();
+});
+ipcMain.on('win:close', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close();
 });
 
 // ---- IPC: an/hien BrowserView khi mo/dong overlay Settings ----

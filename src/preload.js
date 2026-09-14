@@ -19,7 +19,18 @@ contextBridge.exposeInMainWorld('api', {
     return () => ipcRenderer.removeListener('nav:state', listener);
   },
 
-  // ---- Quan ly tab (toi da 3 tab) ----
+  // ---- Dieu khien cua so chinh (thu nho / phong to-khoi phuc / dong) ----
+  // Thay the thanh tieu de mac dinh vi cua so chay o che do frame:false.
+  minimizeWindow: () => ipcRenderer.send('win:minimize'),
+  toggleMaximizeWindow: () => ipcRenderer.send('win:toggle-maximize'),
+  closeWindow: () => ipcRenderer.send('win:close'),
+  onWindowState: (callback) => {
+    const listener = (event, state) => callback(state);
+    ipcRenderer.on('win:state', listener);
+    return () => ipcRenderer.removeListener('win:state', listener);
+  },
+
+  // ---- Quan ly tab (toi da 10 tab) ----
   getMaxTabs: () => ipcRenderer.invoke('tabs:get-max'),
   newTab: () => ipcRenderer.send('tabs:new'),
   switchTab: (tabId) => ipcRenderer.send('tabs:switch', tabId),

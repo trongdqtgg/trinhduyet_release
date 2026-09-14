@@ -1,9 +1,10 @@
 # HTHV4 Browser
 
 Trình duyệt Electron tối giản, mặc định mở `https://hthv4.vnpthis.vn/`, có thanh
-công cụ (back / forward / reload / home / thanh địa chỉ), **nhiều tab (tối đa
-3)**, **tự động cập nhật qua GitHub Releases**, và màn hình **Settings** để
-đổi URL mặc định bất cứ lúc nào — không cần build lại app.
+công cụ gọn (back / forward / reload / home / thanh địa chỉ), **nhiều tab (tối
+đa 10)**, nút **thu nhỏ / phóng to / đóng** cửa sổ riêng, **tự động cập nhật
+qua GitHub Releases**, và màn hình **Settings** để đổi URL mặc định bất cứ lúc
+nào — không cần build lại app.
 
 ## Chạy thử (chế độ dev)
 
@@ -87,9 +88,33 @@ tải lại file cài đặt thủ công**.
 
 ### Cách phát hành 1 bản cập nhật mới
 
+**Cách nhanh — chỉ cần click (Windows):**
+
 1. Sửa code xong, **tăng số phiên bản** trong `package.json` (trường
    `"version"`, vd `1.0.0` → `1.0.1`). Đây là bước bắt buộc — GitHub Releases
    và electron-updater xác định "có bản mới hay không" dựa vào số này.
+2. Double-click file **`build-and-publish.bat`** (ở ngay thư mục gốc dự án)
+   trên máy Windows đã cài sẵn Node.js. Script sẽ tự hiện số phiên bản sắp
+   phát hành để bạn kiểm tra, tự `npm install`, tự build, và tự đăng bản mới
+   lên GitHub Releases — không cần gõ lệnh nào.
+
+File `.bat` này đã có sẵn 1 GitHub token (dùng để đăng bài lên
+`trinhduyet_release`) nhúng bên trong theo yêu cầu, để không phải nhập lại
+mỗi lần build. **Vài lưu ý an toàn quan trọng:**
+- **Không chia sẻ file `build-and-publish.bat` này cho người khác**, không
+  đính kèm email, không đưa lên bất kỳ repo/kho lưu trữ công khai nào — ai
+  có file này đều dùng được token để đăng bài (ghi) vào tài khoản GitHub của
+  bạn.
+- Chỉ giữ file này trên (các) máy dùng để build/phát hành, không cần thiết
+  thì xoá khỏi các máy khác.
+- Nếu nghi ngờ token bị lộ, vào https://github.com/settings/tokens (hoặc
+  Settings → Developer settings → Personal access tokens nếu dùng fine-grained
+  token) để **thu hồi (revoke)** và tạo token mới, rồi cập nhật lại vào file
+  `.bat`.
+
+**Cách thủ công (Linux/Mac, hoặc khi cần dùng token khác):**
+
+1. Tăng số phiên bản trong `package.json` như trên.
 2. Tạo 1 **GitHub Personal Access Token** (Settings → Developer settings →
    Personal access tokens) có quyền ghi vào repo `trinhduyet_release` (repo
    Public thì chỉ cần quyền `public_repo`, hoặc fine-grained token với quyền
@@ -98,14 +123,14 @@ tải lại file cài đặt thủ công**.
    ```bash
    GH_TOKEN=dan_token_vao_day npm run dist:win:publish
    ```
-   Lệnh này build xong sẽ **tự động tạo 1 GitHub Release mới** (tag dạng
-   `v1.0.1`) trong repo `trinhduyet_release` và tải lên đúng 3 file cần thiết:
-   file `.exe`, file `.exe.blockmap` (dùng để tải bản vá nhỏ thay vì tải lại
-   toàn bộ), và `latest.yml` (file mà `electron-updater` đọc để biết có bản
-   mới).
-4. Xong — các máy đang chạy bản cũ sẽ tự phát hiện và tải bản mới trong lần
-   kiểm tra kế tiếp (tối đa 4 tiếng, hoặc ngay lập tức nếu người dùng bấm
-   "Kiểm tra cập nhật").
+
+Dù dùng cách nào, lệnh build đều **tự động tạo 1 GitHub Release mới** (tag
+dạng `v1.0.1`) trong repo `trinhduyet_release` và tải lên đúng 3 file cần
+thiết: file `.exe`, file `.exe.blockmap` (dùng để tải bản vá nhỏ thay vì tải
+lại toàn bộ), và `latest.yml` (file mà `electron-updater` đọc để biết có bản
+mới). Xong — các máy đang chạy bản cũ sẽ tự phát hiện và tải bản mới trong
+lần kiểm tra kế tiếp (tối đa 4 tiếng, hoặc ngay lập tức nếu người dùng bấm
+"Kiểm tra cập nhật").
 
 **⚠️ Quan trọng — không tự tay kéo-thả file lên trang GitHub Releases:**
 lúc build thử cục bộ (`--publish=never`), mình phát hiện file `.exe` được tạo
@@ -226,28 +251,55 @@ Nếu sau này trang HIS dùng thêm API JS/Web mới khác mà Chromium 108 ch�
 (gặp lỗi tương tự `Promise.try`), chỉ cần bổ sung thêm đoạn polyfill tương ứng
 vào biến `POLYFILL_SOURCE` trong `src/main.js`.
 
-## Nhiều tab (tối đa 3) & mở link trong tab mới
+## Giao diện gọn + nút thu nhỏ / phóng to / đóng cửa sổ
 
-App hỗ trợ tối đa **3 tab** cùng lúc, hiển thị trên thanh tab nằm ngay dưới
-toolbar:
+Toolbar và thanh tab đã được thu nhỏ lại (toolbar 38px, thanh tab 28px —
+trước đây là 49px và 36px) để dành nhiều diện tích hơn cho nội dung trang.
+
+Cửa sổ app giờ chạy ở chế độ **không viền** (bỏ thanh tiêu đề mặc định của
+Windows) để giao diện gọn liền khối như một trình duyệt thật, thay vào đó có
+3 nút riêng ở góc phải toolbar:
+
+- **─** Thu nhỏ xuống taskbar.
+- **□** Phóng to toàn màn hình / bấm lại để khôi phục kích thước cũ (icon
+  không đổi hình, chỉ đổi chữ gợi ý khi rê chuột — "Phóng to" ↔ "Khôi phục").
+- **×** Đóng app (nền đỏ khi rê chuột qua, giống quy ước thường thấy).
+
+Bấm đúp vào vùng trống của toolbar (không trúng nút/ô địa chỉ) cũng phóng
+to/khôi phục cửa sổ, giống thao tác bấm đúp thanh tiêu đề thông thường.
+
+Đã kiểm thử kỹ phần này bằng cách dựng thêm 1 window manager thật (fluxbox)
+trong môi trường test — phát hiện và sửa luôn 1 lỗi thật trong lúc test: khi
+phóng to/khôi phục cửa sổ, nội dung trang (`BrowserView`) đôi khi bị "kẹt" ở
+kích thước cũ do sự kiện resize không phải lúc nào cũng tự phát sinh kèm
+theo; đã sửa bằng cách chủ động tính lại kích thước ngay trong sự kiện
+phóng to/khôi phục thay vì chỉ dựa vào sự kiện resize chung chung.
+
+## Nhiều tab (tối đa 10) & mở link trong tab mới
+
+App hỗ trợ tối đa **10 tab** cùng lúc, hiển thị trên thanh tab gọn nằm ngay
+dưới toolbar:
 
 - Bấm nút **`+`** ở cuối thanh tab để mở tab mới (chạy trang mặc định đã cấu
-  hình trong Settings). Nút này tự động bị mờ/vô hiệu hoá khi đã mở đủ 3 tab.
+  hình trong Settings). Nút này tự động bị mờ/vô hiệu hoá khi đã mở đủ 10 tab,
+  và luôn nằm cố định ở cuối thanh tab (không bị cuộn mất khi có nhiều tab).
 - Bấm vào một tab để chuyển sang tab đó; các tab không hiển thị vẫn giữ
   nguyên trạng thái (không bị tải lại) khi quay lại.
+- Khi số tab nhiều hơn chỗ hiển thị vừa, thanh tab sẽ **tự cuộn ngang**
+  (cuộn chuột hoặc kéo) thay vì cắt mất tab — không tab nào bị "biến mất".
 - Bấm dấu **×** trên tab để đóng tab đó. Không thể đóng khi chỉ còn 1 tab
   (luôn phải còn ít nhất 1 tab mở).
 - **Click phải vào một liên kết (link)** trong trang → chọn **"Mở liên kết
   trong tab mới"** để mở link đó ở tab mới mà không rời khỏi trang hiện tại.
-  Mục này bị mờ/vô hiệu hoá kèm ghi chú khi đã đạt giới hạn 3 tab. Menu chuột
-  phải cũng có sẵn "Sao chép địa chỉ liên kết", "Sao chép" (khi bôi đen chữ)
-  và "Dán" (khi đang gõ vào ô nhập liệu).
+  Mục này bị mờ/vô hiệu hoá kèm ghi chú khi đã đạt giới hạn 10 tab. Menu
+  chuột phải cũng có sẵn "Sao chép địa chỉ liên kết", "Sao chép" (khi bôi đen
+  chữ) và "Dán" (khi đang gõ vào ô nhập liệu).
 
 **Thay đổi hành vi cần lưu ý:** trước đây, các liên kết mở ở "tab mới"
 (`target="_blank"`, hoặc trang tự gọi `window.open()`) sẽ mở bằng trình
 duyệt mặc định của hệ điều hành (Chrome/Edge...). Từ bản này, chúng sẽ mở
 **ngay trong app** dưới dạng một tab mới, để giữ người dùng trong luồng làm
-việc của trang HIS. Nếu đã mở đủ 3 tab thì mới rơi về mở bằng trình duyệt hệ
+việc của trang HIS. Nếu đã mở đủ 10 tab thì mới rơi về mở bằng trình duyệt hệ
 điều hành như cũ. Nếu bạn muốn quay lại hành vi cũ (luôn mở bằng trình duyệt
 ngoài), báo lại để mình chỉnh giúp.
 
@@ -347,7 +399,7 @@ package.json   - script npm + cau hinh electron-builder (build .exe/.AppImage/.d
   điều khiển (back/forward/reload/URL...) qua IPC tới main process, nơi thực
   sự điều hướng `BrowserView`.
 - Link mở ở tab mới (target `_blank`, `window.open()`) sẽ mở thành một tab mới
-  ngay trong app (xem mục "Nhiều tab" ở trên), trừ khi đã đạt giới hạn 3 tab —
+  ngay trong app (xem mục "Nhiều tab" ở trên), trừ khi đã đạt giới hạn 10 tab —
   lúc đó mới rơi về mở bằng trình duyệt mặc định của hệ điều hành.
 - Muốn đổi icon app: thay `build.win.icon` / `build.mac.icon` / `build.linux.icon`
   trong `package.json` trỏ tới file `.ico` / `.icns` / `.png` của bạn.

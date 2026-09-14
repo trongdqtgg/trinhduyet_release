@@ -21,9 +21,13 @@
   }
   #app { display: flex; flex-direction: column; height: 100vh; }
 
+  /* Toolbar thu gon: cao 38px (khop CHINH XAC voi TOOLBAR_HEIGHT trong
+     main.js - nho co box-sizing:border-box o tren, dat height la du, khong
+     can cong don padding/border thu cong nua). */
   #toolbar {
-    display: flex; align-items: center; gap: 6px;
-    padding: 8px 10px;
+    display: flex; align-items: center; gap: 4px;
+    height: 38px;
+    padding: 0 6px;
     background: var(--toolbar);
     border-bottom: 1px solid var(--border);
     -webkit-app-region: drag;
@@ -35,53 +39,72 @@
     background: transparent;
     border: 1px solid var(--border);
     color: var(--text);
-    border-radius: 6px;
-    width: 32px; height: 32px;
-    font-size: 15px;
+    border-radius: 5px;
+    width: 26px; height: 26px;
+    font-size: 13px;
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
   }
   #toolbar button:hover { background: #363c4d; }
   #toolbar button:disabled { opacity: .35; cursor: default; }
   #toolbar button:disabled:hover { background: transparent; }
 
-  .addr-form { flex: 1; display: flex; }
+  .addr-form { flex: 1; display: flex; min-width: 0; }
   #address {
     flex: 1;
     background: #12151c;
     border: 1px solid var(--border);
     color: var(--text);
-    border-radius: 6px;
-    padding: 0 10px;
-    height: 32px;
-    font-size: 13px;
+    border-radius: 5px;
+    padding: 0 8px;
+    height: 24px;
+    font-size: 12px;
     outline: none;
   }
   #address:focus { border-color: var(--accent); }
 
-  #settings-btn { margin-left: 4px; }
+  #settings-btn { margin-left: 2px; }
 
-  /* Thanh tab, cao 36px (khop voi TAB_BAR_HEIGHT trong main.js). */
+  /* Nut dieu khien cua so (thu nho / phong to-khoi phuc / dong), thay cho
+     thanh tieu de mac dinh cua he dieu hanh (cua so chay o che do
+     frame:false - xem main.js). Tach rieng khoi nhom nut trai bang 1
+     khoang cach lon hon (margin-left:auto) de day sang phia phai. */
+  #window-controls { display: flex; gap: 2px; margin-left: auto; }
+  #window-controls button { border-radius: 3px; }
+  #win-close:hover { background: #e5484d; border-color: #e5484d; color: #fff; }
+
+  /* Thanh tab, cao 28px (khop CHINH XAC voi TAB_BAR_HEIGHT trong main.js). */
   #tabbar {
-    display: flex; align-items: stretch; gap: 2px;
-    height: 36px; min-height: 36px;
-    padding: 4px 6px 0;
+    display: flex; align-items: stretch;
+    height: 28px;
+    padding: 0 4px;
     background: var(--bg);
     border-bottom: 1px solid var(--border);
-    overflow: hidden;
   }
+  #tabs-scroll {
+    display: flex; align-items: stretch; gap: 2px;
+    flex: 1; min-width: 0;
+    overflow-x: auto; overflow-y: hidden;
+    padding-top: 3px;
+    scrollbar-width: thin;
+  }
+  #tabs-scroll::-webkit-scrollbar { height: 3px; }
+  #tabs-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  #tabs-scroll::-webkit-scrollbar-track { background: transparent; }
   .tab {
-    display: flex; align-items: center; gap: 6px;
-    max-width: 220px; min-width: 100px; flex: 1;
-    padding: 0 8px 0 12px;
+    display: flex; align-items: center; gap: 4px;
+    max-width: 160px; min-width: 68px; flex: 1 1 auto;
+    padding: 0 6px 0 10px;
     background: #262c3a;
     border: 1px solid var(--border);
     border-bottom: none;
-    border-radius: 8px 8px 0 0;
+    border-radius: 6px 6px 0 0;
     color: var(--muted);
-    font-size: 12px;
+    font-size: 11px;
     cursor: pointer;
     user-select: none;
+    flex-shrink: 0;
   }
   .tab:hover { background: #2d3444; }
   .tab.active { background: var(--toolbar); color: var(--text); }
@@ -89,18 +112,18 @@
     flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .tab-close {
-    width: 18px; height: 18px; border-radius: 4px;
+    width: 15px; height: 15px; border-radius: 3px;
     display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0; font-size: 13px; line-height: 1;
+    flex-shrink: 0; font-size: 12px; line-height: 1;
     color: var(--muted);
   }
   .tab-close:hover { background: #3a4051; color: var(--text); }
   #tab-new {
     flex: 0 0 auto;
-    width: 28px; height: 28px; margin-top: auto; margin-bottom: 4px;
-    border-radius: 6px; border: 1px solid var(--border);
+    width: 20px; height: 20px; align-self: center; margin-left: 4px;
+    border-radius: 5px; border: 1px solid var(--border);
     background: transparent; color: var(--text);
-    font-size: 15px; cursor: pointer;
+    font-size: 13px; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
   }
   #tab-new:hover { background: #363c4d; }
@@ -164,8 +187,16 @@
       </form>
       <button id="devtools-btn" title="DevTools cua trang web (F12) - xem loi Console/Network">&lt;/&gt;</button>
       <button id="settings-btn" title="Cai dat">&#9881;</button>
+      <div id="window-controls">
+        <button id="win-minimize" title="Thu nho">&#9472;</button>
+        <button id="win-maximize" title="Phong to">&#9633;</button>
+        <button id="win-close" title="Dong">&times;</button>
+      </div>
     </div>
-    <div id="tabbar"></div>
+    <div id="tabbar">
+      <div id="tabs-scroll"></div>
+      <button id="tab-new" title="Mo tab moi">+</button>
+    </div>
     <div id="webview-wrap">
       <div id="loading-bar"></div>
     </div>
@@ -217,7 +248,11 @@
   const settingsCancel = document.getElementById('settings-cancel');
   const clearCacheBtn = document.getElementById('clear-cache-btn');
   const loadingBar = document.getElementById('loading-bar');
-  const tabbar = document.getElementById('tabbar');
+  const tabsScroll = document.getElementById('tabs-scroll');
+  const tabNewBtn = document.getElementById('tab-new');
+  const winMinimizeBtn = document.getElementById('win-minimize');
+  const winMaximizeBtn = document.getElementById('win-maximize');
+  const winCloseBtn = document.getElementById('win-close');
   const appVersionEl = document.getElementById('app-version');
   const updateStatusEl = document.getElementById('update-status');
   const checkUpdateBtn = document.getElementById('check-update-btn');
@@ -250,7 +285,7 @@
   // tranh lech voi main process (nguon su that duy nhat la BrowserView).
   function renderTabs(tabsState) {
     if (!Array.isArray(tabsState)) return;
-    tabbar.innerHTML = '';
+    tabsScroll.innerHTML = '';
     tabsState.forEach((t) => {
       const el = document.createElement('div');
       el.className = 'tab' + (t.active ? ' active' : '');
@@ -280,18 +315,15 @@
         e.preventDefault();
         window.api.tabContextMenu(t.id);
       });
-      tabbar.appendChild(el);
+      tabsScroll.appendChild(el);
     });
 
-    const newBtn = document.createElement('button');
-    newBtn.id = 'tab-new';
-    newBtn.title = tabsState.length >= maxTabs
+    // Nut "+" nam CO DINH ngoai vung cuon (#tabs-scroll), khong bi cuon
+    // theo tab khi co nhieu tab hon cho hien thi.
+    tabNewBtn.title = tabsState.length >= maxTabs
       ? `Da dat toi da ${maxTabs} tab`
       : 'Mo tab moi';
-    newBtn.textContent = '+';
-    newBtn.disabled = tabsState.length >= maxTabs;
-    newBtn.addEventListener('click', () => window.api.newTab());
-    tabbar.appendChild(newBtn);
+    tabNewBtn.disabled = tabsState.length >= maxTabs;
   }
 
   window.api.onTabsState(renderTabs);
@@ -305,7 +337,26 @@
     appVersionEl.textContent = await window.api.getAppVersion();
   }
 
+  tabNewBtn.addEventListener('click', () => window.api.newTab());
+
   devtoolsBtn.addEventListener('click', () => window.api.openDevTools());
+
+  // ---- Dieu khien cua so (thu nho / phong to-khoi phuc / dong) ----
+  // Cua so chinh chay o che do frame:false (khong con thanh tieu de mac
+  // dinh cua he dieu hanh - xem main.js), nen can tu ve nut thay the.
+  winMinimizeBtn.addEventListener('click', () => window.api.minimizeWindow());
+  winMaximizeBtn.addEventListener('click', () => window.api.toggleMaximizeWindow());
+  winCloseBtn.addEventListener('click', () => window.api.closeWindow());
+  // Bam dup vao vung keo (toolbar, ngoai cac nut/o nhap) cung phong to/
+  // khoi phuc cua so, giong hanh vi thanh tieu de thong thuong.
+  document.getElementById('toolbar').addEventListener('dblclick', (e) => {
+    if (e.target.closest('button, input, form')) return;
+    window.api.toggleMaximizeWindow();
+  });
+  window.api.onWindowState((state) => {
+    const maximized = !!(state && state.maximized);
+    winMaximizeBtn.title = maximized ? 'Khoi phuc' : 'Phong to';
+  });
 
   btnBack.addEventListener('click', () => window.api.back());
   btnForward.addEventListener('click', () => window.api.forward());
