@@ -11,17 +11,20 @@
     "start": "electron .",
     "dist": "electron-builder --publish=never",
     "dist:win": "electron-builder --win --publish=never",
+    "dist:win:publish": "electron-builder --win --publish=always",
     "dist:linux": "electron-builder --linux --publish=never",
     "dist:mac": "electron-builder --mac --publish=never"
   },
   "build": {
     "appId": "vn.vnpthis.hthv4browser",
     "productName": "HTHV4 Browser",
-    "publish": {
-      "provider": "github",
-      "owner": "trongdqtgg",
-      "repo": "trinhduyet_release"
-    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "trongdqtgg",
+        "repo": "trinhduyet_release"
+      }
+    ],
     "directories": {
       "output": "release"
     },
@@ -64,6 +67,6 @@
   },
   "dependencies": {
     "electron-store": "^8.2.0",
-    "electron-updater": "^6.6.2"
+    "electron-updater": "^6.8.9"
   }
 }

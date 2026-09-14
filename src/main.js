@@ -1,6 +1,7 @@
 const { app, BrowserWindow, BrowserView, ipcMain, Menu, shell, clipboard, session, screen, dialog } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
+const { autoUpdater } = require('electron-updater');
 
 // URL mac dinh khi chay lan dau. Nguoi dung co the doi trong man hinh Settings
 // cua app, hoac sua truc tiep gia tri "url" trong file config luu tai:
@@ -481,6 +482,82 @@ function openTabOnSecondDisplay(tabId) {
   });
 }
 
+// ---- Tu dong cap nhat qua GitHub Releases (electron-updater) ----
+// Repo release: https://github.com/trongdqtgg/trinhduyet_release (public,
+// khong nhung token nao vao app - xem package.json "build.publish" va
+// README muc "Tu dong cap nhat" de biet cach dong goi + phat hanh 1 ban moi).
+function sendUpdateStatus(status, data) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('update:status', { status, ...data });
+  }
+}
+
+function setupAutoUpdater() {
+  // Trong che do dev (npm start, chua dong goi thanh .exe) khong co
+  // latest.yml/dev-app-update.yml phu hop nen check se luon loi - bo qua
+  // hoan toan de khong lam nhieu log/UI luc dang phat trien.
+  if (!app.isPackaged) {
+    console.log('[update] Bo qua tu dong cap nhat vi dang chay o che do dev.');
+    return;
+  }
+
+  autoUpdater.autoDownload = true;
+  // Khong ep khoi dong lai ngay khi tai xong - chi tu cai khi nguoi dung
+  // chu dong thoat app (hoac bam "Khoi dong lai ngay" o hop thoai/nut trong
+  // Settings), tranh lam gian doan ca truc dang lam viec.
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('checking-for-update', () => {
+    console.log('[update] Dang kiem tra cap nhat...');
+    sendUpdateStatus('checking');
+  });
+  autoUpdater.on('update-available', (info) => {
+    console.log('[update] Co ban cap nhat moi:', info.version);
+    sendUpdateStatus('available', { version: info.version });
+  });
+  autoUpdater.on('update-not-available', () => {
+    console.log('[update] Dang dung ban moi nhat.');
+    sendUpdateStatus('not-available');
+  });
+  autoUpdater.on('error', (err) => {
+    console.error('[update] Loi kiem tra/tai cap nhat:', (err && (err.stack || err.message)) || err);
+    sendUpdateStatus('error', { message: (err && err.message) || String(err) });
+  });
+  autoUpdater.on('download-progress', (progress) => {
+    sendUpdateStatus('downloading', { percent: Math.round(progress.percent) });
+  });
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('[update] Da tai xong ban cap nhat:', info.version);
+    sendUpdateStatus('downloaded', { version: info.version });
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      dialog
+        .showMessageBox(mainWindow, {
+          type: 'info',
+          buttons: ['Khoi dong lai ngay', 'De sau'],
+          defaultId: 0,
+          cancelId: 1,
+          title: 'Co ban cap nhat moi',
+          message: `Da tai xong phien ban ${info.version}.`,
+          detail: 'Khoi dong lai app de ap dung ban cap nhat. Ban co the chon "De sau" - ban cap nhat se tu cai vao lan ke tiep app duoc dong hoan toan.',
+        })
+        .then((result) => {
+          if (result.response === 0) autoUpdater.quitAndInstall();
+        });
+    }
+  });
+
+  // Kiem tra ngay sau khi khoi dong (tre 5 giay de khong lam cham qua trinh
+  // mo trang chinh), sau do kiem tra dinh ky moi 4 tieng.
+  setTimeout(() => {
+    autoUpdater.checkForUpdates().catch((err) => {
+      console.error('[update] Khong the kiem tra cap nhat luc khoi dong:', err);
+    });
+  }, 5000);
+  setInterval(() => {
+    autoUpdater.checkForUpdates().catch(() => {});
+  }, 4 * 60 * 60 * 1000);
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -513,7 +590,10 @@ function createWindow() {
   createTab(store.get('url'));
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+  setupAutoUpdater();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
@@ -609,6 +689,23 @@ if (process.env.HTHV4_TEST_HOOKS === '1') {
     getMainWindowBrowserViewCount: () => (mainWindow ? mainWindow.getBrowserViews().length : 0),
     openTabOnSecondDisplay,
     pickSecondDisplay,
+    autoUpdater,
+    sendUpdateStatus,
+    forceSetupAutoUpdater: () => {
+      // Ban that cua setupAutoUpdater() bi chan boi app.isPackaged khi chay
+      // qua `electron .`; ham nay chi dang ky lai cac listener (khong dung
+      // guard) de script test co the gia lap su kien autoUpdater.emit(...).
+      autoUpdater.autoDownload = true;
+      autoUpdater.autoInstallOnAppQuit = true;
+      autoUpdater.on('checking-for-update', () => sendUpdateStatus('checking'));
+      autoUpdater.on('update-available', (info) => sendUpdateStatus('available', { version: info.version }));
+      autoUpdater.on('update-not-available', () => sendUpdateStatus('not-available'));
+      autoUpdater.on('error', (err) => sendUpdateStatus('error', { message: (err && err.message) || String(err) }));
+      autoUpdater.on('download-progress', (p) => sendUpdateStatus('downloading', { percent: Math.round(p.percent) }));
+      autoUpdater.on('update-downloaded', (info) => {
+        sendUpdateStatus('downloaded', { version: info.version });
+      });
+    },
   };
 }
 
@@ -619,6 +716,25 @@ if (process.env.HTHV4_TEST_HOOKS === '1') {
 ipcMain.on('devtools:open', () => {
   const tab = getActiveTab();
   if (tab) toggleContentDevTools(tab.view);
+});
+
+// ---- IPC: tu dong cap nhat (goi tu man hinh Settings) ----
+ipcMain.handle('update:get-version', () => app.getVersion());
+
+ipcMain.handle('update:check-now', async () => {
+  if (!app.isPackaged) {
+    return { status: 'dev-mode' };
+  }
+  try {
+    await autoUpdater.checkForUpdates();
+    return { status: 'checked' };
+  } catch (err) {
+    return { status: 'error', message: (err && err.message) || String(err) };
+  }
+});
+
+ipcMain.on('update:install-now', () => {
+  if (app.isPackaged) autoUpdater.quitAndInstall();
 });
 
 // ---- IPC: xoa cache trinh duyet (goi tu man hinh Settings) ----

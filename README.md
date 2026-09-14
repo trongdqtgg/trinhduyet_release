@@ -2,8 +2,8 @@
 
 Trình duyệt Electron tối giản, mặc định mở `https://hthv4.vnpthis.vn/`, có thanh
 công cụ (back / forward / reload / home / thanh địa chỉ), **nhiều tab (tối đa
-3)** và màn hình **Settings** để đổi URL mặc định bất cứ lúc nào — không cần
-build lại app.
+3)**, **tự động cập nhật qua GitHub Releases**, và màn hình **Settings** để
+đổi URL mặc định bất cứ lúc nào — không cần build lại app.
 
 ## Chạy thử (chế độ dev)
 
@@ -59,6 +59,79 @@ File cài đặt cuối cùng nằm ở `release/HTHV4 Browser Setup <version>.e
 hình hiện tại, đây là **1 file installer duy nhất chạy được cả trên Windows
 32-bit lẫn 64-bit** (NSIS tự nhận diện đúng bản khi cài).
 
+## Tự động cập nhật (GitHub Releases)
+
+App tự kiểm tra bản mới từ repo Release công khai
+**https://github.com/trongdqtgg/trinhduyet_release** bằng thư viện
+`electron-updater`, và tự tải + cài khi có bản mới — **không cần người dùng
+tải lại file cài đặt thủ công**.
+
+### Người dùng thấy gì
+
+- App tự kiểm tra cập nhật 5 giây sau khi khởi động, và lặp lại mỗi 4 tiếng.
+- Nếu có bản mới: tự tải ngầm (không làm gián đoạn công việc). Tải xong sẽ
+  hiện hộp thoại hỏi **"Khởi động lại ngay"** hoặc **"Để sau"**. Nếu chọn
+  "Để sau", bản cập nhật vẫn được tự cài vào lần kế tiếp app được **đóng hoàn
+  toàn** (không phải thoát bằng nút X thông thường nếu app chạy nền... trong
+  bản hiện tại app thoát hẳn khi đóng cửa sổ chính, nên chỉ cần đóng app rồi
+  mở lại là được cập nhật).
+- Trong màn hình **Settings** có mục **"Kiểm tra cập nhật"** để chủ động bấm
+  kiểm tra ngay (hữu ích khi vừa phát hành bản mới, không muốn đợi 4 tiếng),
+  hiện phiên bản đang chạy, và nút **"Cài đặt & khởi động lại"** xuất hiện khi
+  đã tải xong bản mới.
+- Vì repo release là **Public**, app **không cần nhúng bất kỳ token/API key**
+  nào để kiểm tra/tải bản cập nhật — an toàn, không có gì để lộ nếu ai đó dịch
+  ngược file cài đặt.
+- Chạy bằng `npm start` (chế độ dev, chưa đóng gói) sẽ **tự bỏ qua** toàn bộ
+  bước kiểm tra cập nhật (Settings sẽ ghi rõ "đang chạy ở chế độ dev").
+
+### Cách phát hành 1 bản cập nhật mới
+
+1. Sửa code xong, **tăng số phiên bản** trong `package.json` (trường
+   `"version"`, vd `1.0.0` → `1.0.1`). Đây là bước bắt buộc — GitHub Releases
+   và electron-updater xác định "có bản mới hay không" dựa vào số này.
+2. Tạo 1 **GitHub Personal Access Token** (Settings → Developer settings →
+   Personal access tokens) có quyền ghi vào repo `trinhduyet_release` (repo
+   Public thì chỉ cần quyền `public_repo`, hoặc fine-grained token với quyền
+   "Contents: Read and write" cho riêng repo đó).
+3. Chạy (trên máy đã cài Wine nếu build từ Linux, xem mục trên):
+   ```bash
+   GH_TOKEN=dan_token_vao_day npm run dist:win:publish
+   ```
+   Lệnh này build xong sẽ **tự động tạo 1 GitHub Release mới** (tag dạng
+   `v1.0.1`) trong repo `trinhduyet_release` và tải lên đúng 3 file cần thiết:
+   file `.exe`, file `.exe.blockmap` (dùng để tải bản vá nhỏ thay vì tải lại
+   toàn bộ), và `latest.yml` (file mà `electron-updater` đọc để biết có bản
+   mới).
+4. Xong — các máy đang chạy bản cũ sẽ tự phát hiện và tải bản mới trong lần
+   kiểm tra kế tiếp (tối đa 4 tiếng, hoặc ngay lập tức nếu người dùng bấm
+   "Kiểm tra cập nhật").
+
+**⚠️ Quan trọng — không tự tay kéo-thả file lên trang GitHub Releases:**
+lúc build thử cục bộ (`--publish=never`), mình phát hiện file `.exe` được tạo
+ra có tên chứa dấu cách (vd `HTHV4 Browser Setup 1.0.0.exe`), nhưng file
+`latest.yml` mà electron-builder tạo ra lại trỏ tới tên **không có dấu cách**
+(vd `HTHV4-Browser-Setup-1.0.0.exe`, dùng dấu gạch ngang) — đây là tên mà
+electron-builder SẼ dùng khi tự upload qua lệnh `dist:win:publish` ở trên.
+Nếu bạn tự tay kéo file gốc (có dấu cách) lên GitHub, tên file sẽ không khớp
+với `latest.yml` và **app sẽ báo lỗi tải cập nhật không rõ nguyên nhân**. Vì
+vậy luôn dùng lệnh `npm run dist:win:publish` ở bước 3 thay vì tải thủ công.
+Nếu vì lý do nào đó bắt buộc phải tải tay, phải đổi tên file `.exe` cho khớp
+chính xác với trường `path:` trong `release/latest.yml` trước khi tải lên,
+và phải tải lên cả file `.blockmap` lẫn `latest.yml`.
+
+### Giới hạn khi kiểm thử tính năng này
+
+Mình đã kiểm thử kỹ phần xử lý sự kiện và giao diện (giả lập đầy đủ các
+trạng thái: đang kiểm tra / có bản mới / đang tải / tải xong / lỗi mạng) và
+xác nhận UI trong Settings phản ứng đúng ở từng bước, cũng như xác nhận
+`electron-updater` được đóng gói đúng vào file cài đặt. Tuy nhiên, việc tải
+thật + cài đặt thật + khởi động lại (`quitAndInstall`) chỉ có thể kiểm chứng
+đầy đủ khi đã có ít nhất 1 bản Release thật trên GitHub và cài trên máy
+Windows thật — chưa test được bước này trong môi trường dựng app. Sau khi
+bạn phát hành bản Release đầu tiên (theo hướng dẫn ở trên), hãy thử cập nhật
+lên 1 bản tiếp theo và báo lại nếu có lỗi.
+
 ## ⚠️ Hỗ trợ Windows 7 (32-bit)
 
 Project này đã được **hạ (downgrade) xuống Electron 22.3.27** — đây là bản
@@ -80,6 +153,12 @@ Cần lưu ý:
 - Nếu sau này không còn cần hỗ trợ Windows 7 nữa, nên nâng `electron` trong
   `package.json` lên bản mới nhất và bỏ `"ia32"` khỏi `build.win.target.arch`
   để có bản Chromium mới, an toàn hơn.
+- **Về tự động cập nhật (mục trên):** tải cập nhật từ GitHub cần kết nối
+  HTTPS/TLS 1.2. Bản Windows 7 cài đặt gốc (chưa cập nhật Windows Update lần
+  nào) có thể **chưa bật TLS 1.2** theo mặc định, khiến việc kiểm tra cập
+  nhật báo lỗi mạng dù máy vẫn có Internet. Nếu gặp tình huống này, cần bật
+  TLS 1.2 cho Windows 7 (qua Windows Update hoặc chỉnh registry) — bản thân
+  app không tự sửa được giới hạn này của hệ điều hành.
 
 ## Vá lỗi "Promise.try" / "Promise.withResolvers" / không hiển thị được PDF
 

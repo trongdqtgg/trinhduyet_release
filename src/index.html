@@ -142,8 +142,8 @@
     border: 1px solid var(--border); background: #12151c; color: var(--text);
     padding: 0 10px; font-size: 13px; margin-bottom: 16px;
   }
-  #settings-actions { display: flex; justify-content: flex-end; gap: 8px; }
-  #settings-actions button {
+  .settings-actions { display: flex; justify-content: flex-end; gap: 8px; }
+  .settings-actions button {
     padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border);
     background: transparent; color: var(--text); cursor: pointer; font-size: 13px;
   }
@@ -177,7 +177,7 @@
       <p>Trang web nay se duoc mo moi khi khoi dong app, va khi bam nut Home.</p>
       <label for="settings-url">Dia chi (URL)</label>
       <input id="settings-url" type="text" spellcheck="false" placeholder="https://hthv4.vnpthis.vn/" />
-      <div id="settings-actions">
+      <div class="settings-actions">
         <button id="settings-cancel">Huy</button>
         <button id="settings-save">Luu &amp; ap dung</button>
       </div>
@@ -187,8 +187,17 @@
         du server da sua, co the do trinh duyet dang giu ban cu trong bo nho
         dem. Thu xoa cache va tai lai trang (khong mat dang nhap).
       </p>
-      <div id="settings-actions">
+      <div class="settings-actions">
         <button id="clear-cache-btn">Xoa cache &amp; tai lai trang</button>
+      </div>
+      <hr style="border-color: var(--border); margin: 16px 0;" />
+      <p style="margin-bottom: 6px;">
+        Phien ban hien tai: <strong id="app-version">...</strong>
+      </p>
+      <p id="update-status" style="margin-bottom: 10px;"></p>
+      <div class="settings-actions">
+        <button id="check-update-btn">Kiem tra cap nhat</button>
+        <button id="install-update-btn" style="display:none;">Cai dat &amp; khoi dong lai</button>
       </div>
     </div>
   </div>
@@ -209,6 +218,10 @@
   const clearCacheBtn = document.getElementById('clear-cache-btn');
   const loadingBar = document.getElementById('loading-bar');
   const tabbar = document.getElementById('tabbar');
+  const appVersionEl = document.getElementById('app-version');
+  const updateStatusEl = document.getElementById('update-status');
+  const checkUpdateBtn = document.getElementById('check-update-btn');
+  const installUpdateBtn = document.getElementById('install-update-btn');
 
   let maxTabs = 3;
 
@@ -289,6 +302,7 @@
     maxTabs = await window.api.getMaxTabs();
     const state = await window.api.getNavState();
     applyNavState(state);
+    appVersionEl.textContent = await window.api.getAppVersion();
   }
 
   devtoolsBtn.addEventListener('click', () => window.api.openDevTools());
@@ -344,6 +358,57 @@
     clearCacheBtn.disabled = false;
     clearCacheBtn.textContent = 'Xoa cache & tai lai trang';
     closeSettings();
+  });
+
+  // ---- Tu dong cap nhat (GitHub Releases qua electron-updater) ----
+  function renderUpdateStatus(state) {
+    if (!state) return;
+    switch (state.status) {
+      case 'checking':
+        updateStatusEl.textContent = 'Dang kiem tra cap nhat...';
+        installUpdateBtn.style.display = 'none';
+        break;
+      case 'available':
+        updateStatusEl.textContent = `Co ban ${state.version} - dang tai ve...`;
+        installUpdateBtn.style.display = 'none';
+        break;
+      case 'not-available':
+        updateStatusEl.textContent = 'Ban dang dung phien ban moi nhat.';
+        installUpdateBtn.style.display = 'none';
+        break;
+      case 'downloading':
+        updateStatusEl.textContent = `Dang tai ban cap nhat... ${state.percent}%`;
+        break;
+      case 'downloaded':
+        updateStatusEl.textContent = `Da tai xong ban ${state.version}. San sang cai dat.`;
+        installUpdateBtn.style.display = 'inline-block';
+        break;
+      case 'error':
+        updateStatusEl.textContent = 'Khong kiem tra duoc cap nhat (co the do mang). ' + (state.message || '');
+        installUpdateBtn.style.display = 'none';
+        break;
+      case 'dev-mode':
+        updateStatusEl.textContent = 'Dang chay o che do dev (chua dong goi) nen khong kiem tra cap nhat.';
+        break;
+      default:
+        break;
+    }
+  }
+
+  window.api.onUpdateStatus(renderUpdateStatus);
+
+  checkUpdateBtn.addEventListener('click', async () => {
+    checkUpdateBtn.disabled = true;
+    updateStatusEl.textContent = 'Dang kiem tra...';
+    const res = await window.api.checkForUpdates();
+    checkUpdateBtn.disabled = false;
+    if (res && (res.status === 'dev-mode' || res.status === 'error')) {
+      renderUpdateStatus(res);
+    }
+  });
+
+  installUpdateBtn.addEventListener('click', () => {
+    window.api.installUpdateNow();
   });
 
   init();
