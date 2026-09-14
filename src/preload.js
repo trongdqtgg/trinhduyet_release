@@ -39,4 +39,14 @@ contextBridge.exposeInMainWorld('api', {
   // Click phai vao 1 tab tren thanh tab -> mo menu chuot phai (vd "Mo tab
   // nay o man hinh thu 2").
   tabContextMenu: (tabId) => ipcRenderer.send('tabs:context-menu', tabId),
+
+  // ---- Tu dong cap nhat (GitHub Releases qua electron-updater) ----
+  getAppVersion: () => ipcRenderer.invoke('update:get-version'),
+  checkForUpdates: () => ipcRenderer.invoke('update:check-now'),
+  installUpdateNow: () => ipcRenderer.send('update:install-now'),
+  onUpdateStatus: (callback) => {
+    const listener = (event, state) => callback(state);
+    ipcRenderer.on('update:status', listener);
+    return () => ipcRenderer.removeListener('update:status', listener);
+  },
 });
