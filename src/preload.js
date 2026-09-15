@@ -30,6 +30,11 @@ contextBridge.exposeInMainWorld('api', {
     return () => ipcRenderer.removeListener('win:state', listener);
   },
 
+  // ---- Cua so an danh (session rieng, chi trong bo nho, khong luu ben
+  // vung) ----
+  newIncognitoWindow: () => ipcRenderer.send('window:new-incognito'),
+  isIncognito: () => ipcRenderer.invoke('window:is-incognito'),
+
   // ---- Quan ly tab (toi da 10 tab) ----
   getMaxTabs: () => ipcRenderer.invoke('tabs:get-max'),
   newTab: () => ipcRenderer.send('tabs:new'),
@@ -60,4 +65,24 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.on('update:status', listener);
     return () => ipcRenderer.removeListener('update:status', listener);
   },
+
+  // ---- Phong to/thu nho noi dung trang (zoom) ----
+  zoomIn: () => ipcRenderer.send('zoom:in'),
+  zoomOut: () => ipcRenderer.send('zoom:out'),
+  zoomReset: () => ipcRenderer.send('zoom:reset'),
+  onZoomState: (callback) => {
+    const listener = (event, state) => callback(state);
+    ipcRenderer.on('zoom:state', listener);
+    return () => ipcRenderer.removeListener('zoom:state', listener);
+  },
+
+  // ---- Quan ly mat khau da luu (giong Chrome) ----
+  // "listPasswords" khong bao gio tra ve mat khau that - chi origin/username.
+  // Mat khau chi duoc giai ma khi goi rieng "revealPassword(id)" cho 1 dong.
+  listPasswords: () => ipcRenderer.invoke('passwords:list'),
+  revealPassword: (id) => ipcRenderer.invoke('passwords:reveal', id),
+  deletePassword: (id) => ipcRenderer.send('passwords:delete', id),
+  copyUsername: (id) => ipcRenderer.send('passwords:copy-username', id),
+  copyPassword: (id) => ipcRenderer.send('passwords:copy-password', id),
+  addPassword: (data) => ipcRenderer.invoke('passwords:add', data),
 });

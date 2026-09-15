@@ -66,6 +66,42 @@
 
   #settings-btn { margin-left: 2px; }
 
+  /* Nut mo "Cua so an danh" moi - mau tim nhat de de phan biet voi cac nut
+     khac, giong quy uoc mau "an danh" cua cac trinh duyet pho bien. */
+  #incognito-btn { color: #c9a8ff; border-color: #5b4b8a; }
+  #incognito-btn:hover { background: #3a2d5c; }
+
+  /* Nhan "Dang o Cua so an danh" - CHI hien khi <body> co class "incognito"
+     (dat bang JS ngay sau khi biet cua so nay la an danh - xem script cuoi
+     trang), vi index.html nay dung CHUNG cho ca cua so chinh lan cua so an
+     danh. */
+  #incognito-badge {
+    display: none;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #c9a8ff;
+    background: #2d1b4e;
+    border: 1px solid #5b4b8a;
+    border-radius: 5px;
+    padding: 0 8px;
+    height: 24px;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  body.incognito #incognito-badge { display: flex; }
+  /* Doi mau chu dao cua toan bo toolbar/tabbar sang tim than khi la cua so
+     an danh, de nguoi dung nhan ra NGAY tu xa, khong can doc chu. */
+  body.incognito { --toolbar: #241a38; --bg: #180f26; --border: #4a3a70; }
+  body.incognito #tabbar { background: #1e1530; }
+
+  /* Nut zoom in/out noi dung trang, dat giua nut DevTools va nut Cai dat. */
+  #zoom-controls { display: flex; align-items: center; gap: 2px; }
+  #zoom-level {
+    width: auto; min-width: 34px; padding: 0 4px;
+    font-size: 11px; color: var(--muted);
+  }
+
   /* Nut dieu khien cua so (thu nho / phong to-khoi phuc / dong), thay cho
      thanh tieu de mac dinh cua he dieu hanh (cua so chay o che do
      frame:false - xem main.js). Tach rieng khoi nhom nut trai bang 1
@@ -173,6 +209,32 @@
   #settings-save { background: var(--accent); border-color: var(--accent); }
   #settings-save:hover { filter: brightness(1.08); }
   #settings-cancel:hover { background: #363c4d; }
+
+  /* ---- Danh sach mat khau da luu, trong Settings ----
+     Moi dong chia thanh nhieu hang nho (thay vi don 1 hang ngang) de mat
+     khau/tai khoan DAI van hien du noi dung (xuong dong thay vi bi cat "..."),
+     va co du cho cho cac nut Sao chep. */
+  #password-list { max-height: 220px; overflow-y: auto; margin-bottom: 8px; }
+  .pw-row { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .pw-row:last-child { border-bottom: none; }
+  .pw-row-top { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .pw-origin {
+    flex: 1; min-width: 0; color: var(--text); font-weight: 600;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .pw-field-line { display: flex; align-items: center; gap: 6px; margin-top: 3px; }
+  .pw-field-icon { color: var(--muted); font-size: 10px; width: 14px; flex-shrink: 0; text-align: center; }
+  .pw-field-value {
+    flex: 1; min-width: 0; font-family: monospace; color: var(--text);
+    word-break: break-all; /* KHONG cat/rut gon - mat khau dai van hien day du */
+  }
+  .pw-row button {
+    padding: 4px 8px; border-radius: 5px; border: 1px solid var(--border);
+    background: transparent; color: var(--text); cursor: pointer; font-size: 11px;
+    flex-shrink: 0;
+  }
+  .pw-row button:hover { background: #363c4d; }
+  .pw-row button.copied { border-color: var(--accent); color: var(--accent); }
 </style>
 </head>
 <body>
@@ -185,7 +247,14 @@
       <form class="addr-form" id="addr-form">
         <input id="address" type="text" spellcheck="false" placeholder="Nhap dia chi trang web..." />
       </form>
+      <div id="zoom-controls" title="Phong to/thu nho noi dung trang">
+        <button id="zoom-out" title="Thu nho (Ctrl+-)">&minus;</button>
+        <button id="zoom-level" title="Dat lai 100% (Ctrl+0)">100%</button>
+        <button id="zoom-in" title="Phong to (Ctrl+=)">+</button>
+      </div>
+      <div id="incognito-badge" title="Cua so nay la Cua so an danh: du lieu duyet (cookie, dang nhap...) chi nam trong bo nho, tu xoa sach khi dong cua so nay, khong dung chung voi cua so nao khac.">&#128373; An danh</div>
       <button id="devtools-btn" title="DevTools cua trang web (F12) - xem loi Console/Network">&lt;/&gt;</button>
+      <button id="incognito-btn" title="Mo 1 Cua so an danh moi: session rieng, chi luu trong bo nho, tu xoa het khi dong cua so">&#128373;</button>
       <button id="settings-btn" title="Cai dat">&#9881;</button>
       <div id="window-controls">
         <button id="win-minimize" title="Thu nho">&#9472;</button>
@@ -230,6 +299,33 @@
         <button id="check-update-btn">Kiem tra cap nhat</button>
         <button id="install-update-btn" style="display:none;">Cai dat &amp; khoi dong lai</button>
       </div>
+      <hr style="border-color: var(--border); margin: 16px 0;" />
+      <p style="margin-bottom: 8px;">
+        Mat khau da luu (giong Chrome): khi dang nhap thanh cong tren mot
+        trang, app se hoi co muon luu tai khoan khong. Mat khau duoc ma hoa
+        bang co che bao mat cua he dieu hanh (Windows: DPAPI, gan voi tai
+        khoan Windows dang dung), chi luu tren may nay, khong gui di dau.
+      </p>
+      <div class="settings-actions" style="justify-content: flex-start; margin-bottom: 8px;">
+        <button id="add-password-btn">+ Them mat khau</button>
+      </div>
+      <div id="add-password-form" style="display: none; margin-bottom: 12px; padding: 10px; border: 1px solid var(--border); border-radius: 8px;">
+        <label for="add-password-url">Trang web (URL)</label>
+        <input id="add-password-url" type="text" spellcheck="false" placeholder="https://vidu.com/dang-nhap" style="width:100%; height:32px; border-radius:6px; border:1px solid var(--border); background:#12151c; color:var(--text); padding:0 10px; font-size:12px; margin-bottom:8px;" />
+        <label for="add-password-user">Ten dang nhap</label>
+        <input id="add-password-user" type="text" spellcheck="false" style="width:100%; height:32px; border-radius:6px; border:1px solid var(--border); background:#12151c; color:var(--text); padding:0 10px; font-size:12px; margin-bottom:8px;" />
+        <label for="add-password-pass">Mat khau</label>
+        <input id="add-password-pass" type="text" spellcheck="false" style="width:100%; height:32px; border-radius:6px; border:1px solid var(--border); background:#12151c; color:var(--text); padding:0 10px; font-size:12px; margin-bottom:8px; font-family:monospace;" />
+        <p id="add-password-error" style="color:#e5484d; font-size:12px; display:none; margin-bottom:8px;"></p>
+        <div class="settings-actions">
+          <button id="add-password-cancel">Huy</button>
+          <button id="add-password-save" style="background: var(--accent); border-color: var(--accent);">Luu</button>
+        </div>
+      </div>
+      <div id="password-list"></div>
+      <p id="password-empty" style="color: var(--muted); font-size: 12px; display: none;">
+        Chua co mat khau nao duoc luu.
+      </p>
     </div>
   </div>
 
@@ -242,6 +338,7 @@
   const btnHome = document.getElementById('btn-home');
   const settingsBtn = document.getElementById('settings-btn');
   const devtoolsBtn = document.getElementById('devtools-btn');
+  const incognitoBtn = document.getElementById('incognito-btn');
   const settingsOverlay = document.getElementById('settings-overlay');
   const settingsUrlInput = document.getElementById('settings-url');
   const settingsSave = document.getElementById('settings-save');
@@ -257,6 +354,19 @@
   const updateStatusEl = document.getElementById('update-status');
   const checkUpdateBtn = document.getElementById('check-update-btn');
   const installUpdateBtn = document.getElementById('install-update-btn');
+  const zoomOutBtn = document.getElementById('zoom-out');
+  const zoomInBtn = document.getElementById('zoom-in');
+  const zoomLevelBtn = document.getElementById('zoom-level');
+  const passwordListEl = document.getElementById('password-list');
+  const passwordEmptyEl = document.getElementById('password-empty');
+  const addPasswordBtn = document.getElementById('add-password-btn');
+  const addPasswordForm = document.getElementById('add-password-form');
+  const addPasswordUrl = document.getElementById('add-password-url');
+  const addPasswordUser = document.getElementById('add-password-user');
+  const addPasswordPass = document.getElementById('add-password-pass');
+  const addPasswordError = document.getElementById('add-password-error');
+  const addPasswordCancel = document.getElementById('add-password-cancel');
+  const addPasswordSave = document.getElementById('add-password-save');
 
   let maxTabs = 3;
 
@@ -328,6 +438,161 @@
 
   window.api.onTabsState(renderTabs);
 
+  // ---- Phong to/thu nho noi dung trang (zoom) ----
+  zoomOutBtn.addEventListener('click', () => window.api.zoomOut());
+  zoomInBtn.addEventListener('click', () => window.api.zoomIn());
+  zoomLevelBtn.addEventListener('click', () => window.api.zoomReset());
+  window.api.onZoomState((state) => {
+    if (state && typeof state.percent === 'number') {
+      zoomLevelBtn.textContent = state.percent + '%';
+    }
+  });
+
+  // ---- Danh sach mat khau da luu ----
+  // Chi lay origin/username tu main process (khong bao gio lay san mat khau
+  // that) - mat khau chi duoc giai ma khi nguoi dung chu dong bam "Hien" cho
+  // TUNG dong (goi rieng revealPassword(id) luc do), giam thoi gian mat khau
+  // ro nam trong bo nho cua trang renderer.
+  // Bam mot nut "Sao chep" -> doi tam nhan thanh "Da chep" trong 1.2s de
+  // nguoi dung biet thao tac da thanh cong (khong co thong bao rieng nao khac).
+  function flashCopied(btn) {
+    const original = btn.textContent;
+    btn.textContent = 'Da chep';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = original;
+      btn.classList.remove('copied');
+    }, 1200);
+  }
+
+  async function renderPasswordList() {
+    const entries = await window.api.listPasswords();
+    passwordListEl.innerHTML = '';
+    passwordEmptyEl.style.display = entries.length ? 'none' : 'block';
+
+    entries.forEach((entry) => {
+      const row = document.createElement('div');
+      row.className = 'pw-row';
+
+      // Hang 1: ten trang + nut Xoa.
+      const top = document.createElement('div');
+      top.className = 'pw-row-top';
+      const originEl = document.createElement('span');
+      originEl.className = 'pw-origin';
+      originEl.textContent = entry.origin;
+      originEl.title = entry.origin;
+      top.appendChild(originEl);
+      const deleteBtn = document.createElement('button');
+      deleteBtn.textContent = 'Xoa';
+      deleteBtn.addEventListener('click', () => {
+        window.api.deletePassword(entry.id);
+        row.remove();
+        if (!passwordListEl.children.length) passwordEmptyEl.style.display = 'block';
+      });
+      top.appendChild(deleteBtn);
+      row.appendChild(top);
+
+      // Hang 2: ten dang nhap (hien day du, khong cat bot) + nut Sao chep.
+      const userLine = document.createElement('div');
+      userLine.className = 'pw-field-line';
+      const userIcon = document.createElement('span');
+      userIcon.className = 'pw-field-icon';
+      userIcon.textContent = '\u{1F464}'; // icon nguoi dung
+      const userValueEl = document.createElement('span');
+      userValueEl.className = 'pw-field-value';
+      userValueEl.textContent = entry.username;
+      const copyUserBtn = document.createElement('button');
+      copyUserBtn.textContent = 'Sao chep';
+      copyUserBtn.addEventListener('click', () => {
+        window.api.copyUsername(entry.id);
+        flashCopied(copyUserBtn);
+      });
+      userLine.appendChild(userIcon);
+      userLine.appendChild(userValueEl);
+      userLine.appendChild(copyUserBtn);
+      row.appendChild(userLine);
+
+      // Hang 3: mat khau (mac dinh che, hien DAY DU khi bam "Hien" - khong
+      // gioi han chieu rong/cat bot nua) + nut Hien/An + nut Sao chep.
+      const pwLine = document.createElement('div');
+      pwLine.className = 'pw-field-line';
+      const pwIcon = document.createElement('span');
+      pwIcon.className = 'pw-field-icon';
+      pwIcon.textContent = '\u{1F511}'; // icon chia khoa
+      const pwValueEl = document.createElement('span');
+      pwValueEl.className = 'pw-field-value';
+      pwValueEl.textContent = '••••••••';
+      const revealBtn = document.createElement('button');
+      revealBtn.textContent = 'Hien';
+      let revealed = false;
+      revealBtn.addEventListener('click', async () => {
+        if (!revealed) {
+          const plain = await window.api.revealPassword(entry.id);
+          pwValueEl.textContent = plain || '(khong doc duoc)';
+          revealBtn.textContent = 'An';
+          revealed = true;
+        } else {
+          pwValueEl.textContent = '••••••••';
+          revealBtn.textContent = 'Hien';
+          revealed = false;
+        }
+      });
+      const copyPassBtn = document.createElement('button');
+      copyPassBtn.textContent = 'Sao chep';
+      copyPassBtn.title = 'Sao chep mat khau (tu dong xoa khoi clipboard sau 30 giay)';
+      copyPassBtn.addEventListener('click', () => {
+        window.api.copyPassword(entry.id);
+        flashCopied(copyPassBtn);
+      });
+      pwLine.appendChild(pwIcon);
+      pwLine.appendChild(pwValueEl);
+      pwLine.appendChild(revealBtn);
+      pwLine.appendChild(copyPassBtn);
+      row.appendChild(pwLine);
+
+      passwordListEl.appendChild(row);
+    });
+  }
+
+  // ---- Them mat khau thu cong (danh cho cac truong hop app khong tu bat
+  // duoc luc dang nhap thuc te) ----
+  function openAddPasswordForm() {
+    addPasswordForm.style.display = 'block';
+    addPasswordUrl.value = '';
+    addPasswordUser.value = '';
+    addPasswordPass.value = '';
+    addPasswordError.style.display = 'none';
+    addPasswordUrl.focus();
+  }
+  function closeAddPasswordForm() {
+    addPasswordForm.style.display = 'none';
+  }
+  addPasswordBtn.addEventListener('click', openAddPasswordForm);
+  addPasswordCancel.addEventListener('click', closeAddPasswordForm);
+  addPasswordSave.addEventListener('click', async () => {
+    addPasswordError.style.display = 'none';
+    addPasswordSave.disabled = true;
+    const result = await window.api.addPassword({
+      url: addPasswordUrl.value.trim(),
+      username: addPasswordUser.value.trim(),
+      password: addPasswordPass.value,
+    });
+    addPasswordSave.disabled = false;
+    if (!result || !result.ok) {
+      addPasswordError.textContent = (result && result.message) || 'Khong luu duoc, vui long thu lai.';
+      addPasswordError.style.display = 'block';
+      return;
+    }
+    closeAddPasswordForm();
+    renderPasswordList();
+  });
+  // Bam Enter o bat ky o nao trong form them mat khau cung coi nhu bam "Luu".
+  [addPasswordUrl, addPasswordUser, addPasswordPass].forEach((el) => {
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') addPasswordSave.click();
+    });
+  });
+
   async function init() {
     homeUrl = await window.api.getUrl();
     settingsUrlInput.placeholder = homeUrl;
@@ -335,11 +600,23 @@
     const state = await window.api.getNavState();
     applyNavState(state);
     appVersionEl.textContent = await window.api.getAppVersion();
+    // index.html nay dung CHUNG cho ca cua so chinh lan cac "Cua so an
+    // danh" - hoi main process xem cua so cua CHINH MINH co phai an danh
+    // khong de doi giao dien (mau tim + nhan "An danh") cho de phan biet.
+    if (await window.api.isIncognito()) {
+      document.body.classList.add('incognito');
+    }
   }
+
+  // Zoom mac dinh la 100% cho tab dau tien (chua co su kien zoom-changed
+  // nao xay ra) - dat gia tri hien thi ban dau de khoi rong o toolbar.
+  zoomLevelBtn.textContent = '100%';
 
   tabNewBtn.addEventListener('click', () => window.api.newTab());
 
   devtoolsBtn.addEventListener('click', () => window.api.openDevTools());
+
+  incognitoBtn.addEventListener('click', () => window.api.newIncognitoWindow());
 
   // ---- Dieu khien cua so (thu nho / phong to-khoi phuc / dong) ----
   // Cua so chinh chay o che do frame:false (khong con thanh tieu de mac
@@ -378,6 +655,8 @@
     window.api.notifyOverlayOpen();
     settingsUrlInput.focus();
     settingsUrlInput.select();
+    closeAddPasswordForm();
+    renderPasswordList();
   }
   function closeSettings() {
     settingsOverlay.classList.remove('open');
